@@ -38,13 +38,13 @@ export default function SettingsModal({
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900">Settings</h2>
+      <div className="absolute inset-0 bg-black/70" onClick={onClose} />
+      <div className="relative bg-[#141414] border border-[#222] rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto dark-scrollbar">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#222]">
+          <h2 className="text-sm font-semibold text-white">Settings</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-xl leading-none"
+            className="text-zinc-500 hover:text-white text-xl leading-none"
           >
             &times;
           </button>
@@ -53,14 +53,14 @@ export default function SettingsModal({
         <div className="p-6 space-y-6">
           {/* Anthropic */}
           <section>
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">
+            <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">
               Anthropic API
             </h3>
             <Field
               label="API Key"
               value={form.anthropicApiKey}
               onChange={(v) => set("anthropicApiKey", v)}
-              placeholder="sk-ant-... (optional — uses server key if blank)"
+              placeholder="sk-ant-..."
               type="password"
             />
           </section>
@@ -68,7 +68,7 @@ export default function SettingsModal({
           {/* Meta / Facebook / Instagram */}
           <section>
             <div className="flex items-center gap-2 mb-3">
-              <h3 className="text-sm font-semibold text-gray-700">
+              <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
                 Meta (Facebook & Instagram)
               </h3>
               <StatusDot connected={metaConnected} label="FB" />
@@ -100,7 +100,7 @@ export default function SettingsModal({
           {/* LinkedIn */}
           <section>
             <div className="flex items-center gap-2 mb-3">
-              <h3 className="text-sm font-semibold text-gray-700">LinkedIn</h3>
+              <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">LinkedIn</h3>
               <StatusDot connected={liConnected} label="LI" />
             </div>
             <div className="space-y-3">
@@ -121,16 +121,16 @@ export default function SettingsModal({
           </section>
         </div>
 
-        <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-100">
+        <div className="flex justify-end gap-3 px-6 py-4 border-t border-[#222]">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+            className="px-4 py-2 text-sm font-medium text-zinc-400 border border-[#333] rounded-lg hover:text-white hover:border-zinc-500 transition"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
-            className="px-4 py-2 text-sm font-medium text-white bg-npi-blue rounded-lg hover:bg-npi-blue-dark transition"
+            className="px-4 py-2 text-sm font-medium text-white bg-white/10 rounded-lg hover:bg-white/20 transition"
           >
             Save
           </button>
@@ -155,7 +155,7 @@ function Field({
 }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-gray-500 mb-1">
+      <label className="block text-xs font-medium text-zinc-500 mb-1">
         {label}
       </label>
       <input
@@ -163,7 +163,7 @@ function Field({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-npi-blue focus:border-transparent"
+        className="w-full bg-[#0a0a0a] border border-[#222] rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:ring-1 focus:ring-zinc-600 focus:border-zinc-600 placeholder-zinc-600"
       />
     </div>
   );
@@ -177,9 +177,9 @@ function StatusDot({
   label: string;
 }) {
   return (
-    <span className="flex items-center gap-1 text-xs text-gray-500">
+    <span className="flex items-center gap-1 text-xs text-zinc-500">
       <span
-        className={`w-2 h-2 rounded-full ${connected ? "bg-green-500" : "bg-red-400"}`}
+        className={`w-2 h-2 rounded-full ${connected ? "bg-emerald-500" : "bg-red-500"}`}
       />
       {label}
     </span>

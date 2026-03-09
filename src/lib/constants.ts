@@ -79,3 +79,23 @@ export const DEFAULT_CREDENTIALS: Credentials = {
   linkedinAccessToken: "",
   linkedinOrganizationId: "",
 };
+
+export type Platform = "facebook" | "instagram" | "linkedin";
+
+export const PLATFORM_CONFIG = {
+  facebook: {
+    label: "Facebook",
+    color: "#1877F2",
+    maxChars: 63206,
+  },
+  instagram: {
+    label: "Instagram",
+    color: "#E4405F",
+    maxChars: 2200,
+  },
+  linkedin: {
+    label: "LinkedIn",
+    color: "#0A66C2",
+    maxChars: 3000,
+  },
+} as const;

@@ -16,10 +16,10 @@ export default function Toast({ message, type, onClose }: ToastProps) {
 
   const bg =
     type === "success"
-      ? "bg-green-600"
+      ? "bg-emerald-600"
       : type === "error"
         ? "bg-red-600"
-        : "bg-npi-blue";
+        : "bg-blue-600";
 
   return (
     <div
@@ -32,21 +32,6 @@ export default function Toast({ message, type, onClose }: ToastProps) {
       >
         &times;
       </button>
-      <style jsx>{`
-        @keyframes slide-up {
-          from {
-            opacity: 0;
-            transform: translateY(16px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        .animate-slide-up {
-          animation: slide-up 0.25s ease-out;
-        }
-      `}</style>
     </div>
   );
 }
