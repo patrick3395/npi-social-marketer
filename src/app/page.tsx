@@ -198,7 +198,10 @@ export default function Home() {
               <span className="text-[#0a0a0a] font-bold text-xs">NPI</span>
             </div>
             <div>
-              <h1 className="text-sm font-semibold text-white leading-tight">Social Marketer</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-sm font-semibold text-white leading-tight">Social Marketer</h1>
+                <span className="text-[10px] font-medium text-zinc-500 bg-zinc-800 px-1.5 py-0.5 rounded">v1.2.0</span>
+              </div>
               <p className="text-[10px] text-zinc-500">Noble Property Inspections</p>
             </div>
           </div>
