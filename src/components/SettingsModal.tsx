@@ -65,6 +65,20 @@ export default function SettingsModal({
             />
           </section>
 
+          {/* fal.ai */}
+          <section>
+            <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">
+              fal.ai (Image & Video Generation)
+            </h3>
+            <Field
+              label="API Key"
+              value={form.falApiKey}
+              onChange={(v) => set("falApiKey", v)}
+              placeholder="fal-..."
+              type="password"
+            />
+          </section>
+
           {/* Meta / Facebook / Instagram */}
           <section>
             <div className="flex items-center gap-2 mb-3">

@@ -64,6 +64,7 @@ export interface GenerateResponse {
 
 export interface Credentials {
   anthropicApiKey: string;
+  falApiKey: string;
   metaPageAccessToken: string;
   facebookPageId: string;
   instagramAccountId: string;
@@ -73,6 +74,7 @@ export interface Credentials {
 
 export const DEFAULT_CREDENTIALS: Credentials = {
   anthropicApiKey: "",
+  falApiKey: "",
   metaPageAccessToken: "",
   facebookPageId: "",
   instagramAccountId: "",

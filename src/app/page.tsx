@@ -321,6 +321,8 @@ export default function Home() {
               imagePrompt={fbImagePrompt}
               imagePromptLoading={fbImgLoading}
               onGenerateImagePrompt={() => handleGenerateImagePrompt("facebook")}
+              falApiKey={credentials.falApiKey}
+              onError={(msg) => showToast(msg, "error")}
             />
             <PlatformCard
               platform="instagram"
@@ -333,6 +335,8 @@ export default function Home() {
               imagePrompt={igImagePrompt}
               imagePromptLoading={igImgLoading}
               onGenerateImagePrompt={() => handleGenerateImagePrompt("instagram")}
+              falApiKey={credentials.falApiKey}
+              onError={(msg) => showToast(msg, "error")}
             />
             <PlatformCard
               platform="linkedin"
@@ -345,6 +349,8 @@ export default function Home() {
               imagePrompt={liImagePrompt}
               imagePromptLoading={liImgLoading}
               onGenerateImagePrompt={() => handleGenerateImagePrompt("linkedin")}
+              falApiKey={credentials.falApiKey}
+              onError={(msg) => showToast(msg, "error")}
             />
           </div>
         ) : (

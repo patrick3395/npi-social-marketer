@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { fal } from "@fal-ai/client";
 import { FacebookIcon, InstagramIcon, LinkedInIcon, BookmarkIcon } from "./PlatformIcons";
 import { Platform, PLATFORM_CONFIG } from "@/lib/constants";
 
@@ -15,6 +16,8 @@ interface PlatformCardProps {
   imagePrompt: string;
   imagePromptLoading: boolean;
   onGenerateImagePrompt: () => void;
+  falApiKey: string;
+  onError: (msg: string) => void;
 }
 
 const icons = {
@@ -22,6 +25,27 @@ const icons = {
   instagram: InstagramIcon,
   linkedin: LinkedInIcon,
 };
+
+const IMAGE_DIMENSIONS: Record<Platform, { width: number; height: number }> = {
+  facebook: { width: 1200, height: 628 },
+  instagram: { width: 1080, height: 1080 },
+  linkedin: { width: 1200, height: 627 },
+};
+
+const VIDEO_ASPECT_RATIOS: Record<Platform, "16:9" | "1:1" | "9:16"> = {
+  facebook: "16:9",
+  instagram: "1:1",
+  linkedin: "16:9",
+};
+
+function downloadBlob(url: string, filename: string) {
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
 
 export default function PlatformCard({
   platform,
@@ -34,10 +58,21 @@ export default function PlatformCard({
   imagePrompt,
   imagePromptLoading,
   onGenerateImagePrompt,
+  falApiKey,
+  onError,
 }: PlatformCardProps) {
   const [copied, setCopied] = useState(false);
-  const [imgCopied, setImgCopied] = useState(false);
   const [draftSaved, setDraftSaved] = useState(false);
+
+  // Image generation state
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imageLoading, setImageLoading] = useState(false);
+
+  // Video generation state
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [videoLoading, setVideoLoading] = useState(false);
+  const [videoProgress, setVideoProgress] = useState(0);
+
   const config = PLATFORM_CONFIG[platform];
   const Icon = icons[platform];
   const charCount = content.length;
@@ -48,16 +83,111 @@ export default function PlatformCard({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleCopyImagePrompt = async () => {
-    await navigator.clipboard.writeText(imagePrompt);
-    setImgCopied(true);
-    setTimeout(() => setImgCopied(false), 2000);
-  };
-
   const handleSaveDraft = () => {
     onSaveDraft();
     setDraftSaved(true);
     setTimeout(() => setDraftSaved(false), 2000);
+  };
+
+  const handleGenerateImage = async () => {
+    if (!falApiKey) {
+      onError("fal.ai API key required. Add one in Settings.");
+      return;
+    }
+    if (!imagePrompt) {
+      onError("Generate an image prompt first, then generate the image.");
+      return;
+    }
+
+    setImageLoading(true);
+    setImageUrl(null);
+    try {
+      fal.config({ credentials: falApiKey });
+      const dims = IMAGE_DIMENSIONS[platform];
+      const result = await fal.subscribe("fal-ai/flux/schnell", {
+        input: {
+          prompt: imagePrompt,
+          image_size: { width: dims.width, height: dims.height },
+          num_images: 1,
+        },
+      });
+      const data = result.data as { images?: { url: string }[] };
+      if (data.images && data.images.length > 0) {
+        setImageUrl(data.images[0].url);
+      } else {
+        onError("No image was returned from fal.ai");
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Image generation failed";
+      onError(msg);
+    } finally {
+      setImageLoading(false);
+    }
+  };
+
+  const handleDownloadImage = () => {
+    if (!imageUrl) return;
+    const ts = Date.now();
+    downloadBlob(imageUrl, `npi-${platform}-${ts}.png`);
+  };
+
+  const handleGenerateVideo = async () => {
+    if (!falApiKey) {
+      onError("fal.ai API key required. Add one in Settings.");
+      return;
+    }
+    if (!content) {
+      onError("Generate post content first before creating a video.");
+      return;
+    }
+
+    setVideoLoading(true);
+    setVideoUrl(null);
+    setVideoProgress(0);
+    try {
+      fal.config({ credentials: falApiKey });
+      // Condense content to key themes for video prompt
+      const videoPrompt = content
+        .replace(/#\w+/g, "")
+        .replace(/\n+/g, " ")
+        .trim()
+        .slice(0, 500);
+
+      const result = await fal.subscribe("fal-ai/kling-video/v1.6/standard/text-to-video", {
+        input: {
+          prompt: videoPrompt,
+          duration: "5",
+          aspect_ratio: VIDEO_ASPECT_RATIOS[platform],
+        },
+        onQueueUpdate: (update) => {
+          if (update.status === "IN_PROGRESS") {
+            const logs = (update as unknown as { logs?: { message: string }[] }).logs;
+            if (logs && logs.length > 0) {
+              const pctMatch = logs[logs.length - 1].message.match(/(\d+)%/);
+              if (pctMatch) setVideoProgress(parseInt(pctMatch[1]));
+            }
+          }
+        },
+      });
+      const data = result.data as { video?: { url: string } };
+      if (data.video?.url) {
+        setVideoUrl(data.video.url);
+      } else {
+        onError("No video was returned from fal.ai");
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Video generation failed";
+      onError(msg);
+    } finally {
+      setVideoLoading(false);
+      setVideoProgress(0);
+    }
+  };
+
+  const handleDownloadVideo = () => {
+    if (!videoUrl) return;
+    const ts = Date.now();
+    downloadBlob(videoUrl, `npi-${platform}-${ts}.mp4`);
   };
 
   const borderClass =
@@ -140,46 +270,136 @@ export default function PlatformCard({
           </div>
         </div>
 
-        {/* Image Prompt Generator */}
-        <div className="border-t border-[#222] pt-3">
-          <button
-            onClick={onGenerateImagePrompt}
-            disabled={imagePromptLoading || !content}
-            className="text-xs text-zinc-500 hover:text-zinc-300 transition flex items-center gap-1.5 disabled:opacity-30"
-          >
-            {imagePromptLoading ? (
-              <>
-                <svg className="animate-spin w-3 h-3" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+        {/* Image Generation */}
+        <div className="border-t border-[#222] pt-3 space-y-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={onGenerateImagePrompt}
+              disabled={imagePromptLoading || !content}
+              className="text-xs text-zinc-500 hover:text-zinc-300 transition flex items-center gap-1.5 disabled:opacity-30"
+            >
+              {imagePromptLoading ? (
+                <>
+                  <Spinner />
+                  Generating prompt...
+                </>
+              ) : (
+                <>
+                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
+                  </svg>
+                  Generate Image Prompt
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={handleGenerateImage}
+              disabled={imageLoading || !imagePrompt}
+              className="px-3 py-1.5 text-xs font-medium bg-violet-600 hover:bg-violet-500 text-white rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5"
+            >
+              {imageLoading ? (
+                <>
+                  <Spinner />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
+                  </svg>
+                  Generate Image
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Image prompt preview */}
+          {imagePrompt && !imageUrl && (
+            <div className="bg-[#0a0a0a] border border-[#222] rounded-lg p-3">
+              <p className="text-xs text-zinc-400 leading-relaxed whitespace-pre-wrap">{imagePrompt}</p>
+            </div>
+          )}
+
+          {/* Generated image display */}
+          {imageUrl && (
+            <div className="space-y-2">
+              <div className="rounded-lg overflow-hidden border border-[#222]">
+                <img src={imageUrl} alt={`Generated ${platform} image`} className="w-full h-auto" />
+              </div>
+              <button
+                onClick={handleDownloadImage}
+                className="px-3 py-1.5 text-xs font-medium border border-[#333] rounded-lg text-zinc-400 hover:text-white hover:border-zinc-500 transition flex items-center gap-1.5"
+              >
+                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
                 </svg>
-                Generating prompt...
+                Download Image
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Video Generation */}
+        <div className="border-t border-[#222] pt-3 space-y-3">
+          <button
+            onClick={handleGenerateVideo}
+            disabled={videoLoading || !content}
+            className="px-3 py-1.5 text-xs font-medium bg-teal-600 hover:bg-teal-500 text-white rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5"
+          >
+            {videoLoading ? (
+              <>
+                <Spinner />
+                Generating Video{videoProgress > 0 ? ` (${videoProgress}%)` : "..."}
               </>
             ) : (
               <>
-                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
+                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" />
                 </svg>
-                Generate Image Prompt
+                Generate Video
               </>
             )}
           </button>
 
-          {imagePrompt && (
-            <div className="mt-2 bg-[#0a0a0a] border border-[#222] rounded-lg p-3">
-              <p className="text-xs text-zinc-400 leading-relaxed whitespace-pre-wrap">{imagePrompt}</p>
+          {/* Video progress bar */}
+          {videoLoading && videoProgress > 0 && (
+            <div className="w-full bg-[#0a0a0a] rounded-full h-1.5 border border-[#222]">
+              <div
+                className="bg-teal-500 h-full rounded-full transition-all duration-300"
+                style={{ width: `${videoProgress}%` }}
+              />
+            </div>
+          )}
+
+          {/* Generated video display */}
+          {videoUrl && (
+            <div className="space-y-2">
+              <div className="rounded-lg overflow-hidden border border-[#222]">
+                <video src={videoUrl} controls className="w-full h-auto" />
+              </div>
               <button
-                onClick={handleCopyImagePrompt}
-                className="mt-2 text-xs text-zinc-600 hover:text-zinc-300 transition"
+                onClick={handleDownloadVideo}
+                className="px-3 py-1.5 text-xs font-medium border border-[#333] rounded-lg text-zinc-400 hover:text-white hover:border-zinc-500 transition flex items-center gap-1.5"
               >
-                {imgCopied ? (
-                  <span className="text-emerald-400 animate-checkmark">Copied!</span>
-                ) : "Copy prompt"}
+                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                </svg>
+                Download Video
               </button>
             </div>
           )}
         </div>
       </div>
     </div>
+  );
+}
+
+function Spinner() {
+  return (
+    <svg className="animate-spin w-3 h-3" viewBox="0 0 24 24" fill="none">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+    </svg>
   );
 }
